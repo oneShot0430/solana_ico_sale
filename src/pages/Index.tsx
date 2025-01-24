@@ -5,11 +5,15 @@ import { TokenSelector } from "@/components/TokenSelector";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Stats } from "@/components/Stats";
 import { Wallet } from "lucide-react";
+import { connectWallet, disconnectWallet } from "@/utils/wallet";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Index() {
   const [selectedToken, setSelectedToken] = useState("SOL");
   const [amount, setAmount] = useState("");
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const { toast } = useToast();
 
   // Placeholder data - would be fetched from blockchain in real implementation
   const icoData = {
@@ -18,6 +22,42 @@ export default function Index() {
     tokenPrice: 0.085,
     currentTokens: 14750000,
     totalTokens: 20000000,
+  };
+
+  const handleWalletConnection = async () => {
+    if (!isWalletConnected) {
+      try {
+        const address = await connectWallet();
+        setWalletAddress(address);
+        setIsWalletConnected(true);
+        toast({
+          title: "Wallet Connected",
+          description: `Connected to ${address.slice(0, 4)}...${address.slice(-4)}`,
+        });
+      } catch (error) {
+        toast({
+          title: "Connection Failed",
+          description: "Failed to connect to Phantom wallet",
+          variant: "destructive",
+        });
+      }
+    } else {
+      try {
+        await disconnectWallet();
+        setWalletAddress("");
+        setIsWalletConnected(false);
+        toast({
+          title: "Wallet Disconnected",
+          description: "Successfully disconnected wallet",
+        });
+      } catch (error) {
+        toast({
+          title: "Disconnection Failed",
+          description: "Failed to disconnect wallet",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleBuy = () => {
@@ -84,14 +124,15 @@ export default function Index() {
               )}
             </div>
 
-            {!isWalletConnected ? (
-              <Button
-                onClick={() => setIsWalletConnected(true)}
-                className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
-              >
-                <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
-              </Button>
-            ) : (
+            <Button
+              onClick={handleWalletConnection}
+              className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              {isWalletConnected ? 'Disconnect Wallet' : 'Connect Wallet'}
+            </Button>
+
+            {isWalletConnected && (
               <Button
                 onClick={handleBuy}
                 className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
