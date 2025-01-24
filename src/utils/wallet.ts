@@ -18,18 +18,21 @@ export const getProvider = (): PhantomProvider | undefined => {
       return provider;
     }
   }
-  window.open('https://phantom.app/', '_blank');
+  // If Phantom is not installed, redirect to extension install page
+  window.open('https://phantom.app/download', '_blank');
+  return undefined;
 };
 
 export const connectWallet = async (): Promise<string> => {
   const provider = getProvider();
   
   if (!provider) {
-    throw new Error('No provider found');
+    throw new Error('Please install Phantom wallet extension first');
   }
 
   try {
     const resp = await provider.connect();
+    console.log("Wallet connected with public key:", resp.publicKey.toString());
     return resp.publicKey.toString();
   } catch (err) {
     console.error("Error connecting to wallet:", err);
@@ -46,6 +49,7 @@ export const disconnectWallet = async (): Promise<void> => {
 
   try {
     await provider.disconnect();
+    console.log("Wallet disconnected successfully");
   } catch (err) {
     console.error("Error disconnecting wallet:", err);
     throw err;
