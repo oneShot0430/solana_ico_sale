@@ -5,15 +5,12 @@ import { TokenSelector } from "@/components/TokenSelector";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Stats } from "@/components/Stats";
 import { Wallet } from "lucide-react";
-import { connectWallet, disconnectWallet } from "@/utils/wallet";
-import { useToast } from "@/components/ui/use-toast";
+import { useWallet } from "@/contexts/WalletContext";
 
 export default function Index() {
   const [selectedToken, setSelectedToken] = useState("SOL");
   const [amount, setAmount] = useState("");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-  const { toast } = useToast();
+  const { isWalletConnected, walletAddress, handleWalletConnection } = useWallet();
 
   // Placeholder data - would be fetched from blockchain in real implementation
   const icoData = {
@@ -22,42 +19,6 @@ export default function Index() {
     tokenPrice: 0.085,
     currentTokens: 14750000,
     totalTokens: 20000000,
-  };
-
-  const handleWalletConnection = async () => {
-    if (!isWalletConnected) {
-      try {
-        const address = await connectWallet();
-        setWalletAddress(address);
-        setIsWalletConnected(true);
-        toast({
-          title: "Wallet Connected",
-          description: `Connected to ${address.slice(0, 4)}...${address.slice(-4)}`,
-        });
-      } catch (error) {
-        toast({
-          title: "Connection Failed",
-          description: "Failed to connect to Phantom wallet",
-          variant: "destructive",
-        });
-      }
-    } else {
-      try {
-        await disconnectWallet();
-        setWalletAddress("");
-        setIsWalletConnected(false);
-        toast({
-          title: "Wallet Disconnected",
-          description: "Successfully disconnected wallet",
-        });
-      } catch (error) {
-        toast({
-          title: "Disconnection Failed",
-          description: "Failed to disconnect wallet",
-          variant: "destructive",
-        });
-      }
-    }
   };
 
   const handleBuy = () => {
