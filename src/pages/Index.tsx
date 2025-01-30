@@ -70,6 +70,7 @@ export default function Index() {
   const fetchProtocolStatus = async () => {
     try {
       const protocolStatus = await program.account.protocolStatus.fetch(protocolStatusPDA.toBase58());
+      console.log("protocolStatus", protocolStatus);
       calIcoData(protocolStatus);
     } catch(error) {
       console.error("Error fetching protocol status:", error);
@@ -160,9 +161,12 @@ export default function Index() {
         connection
       );
 
+      setTimeout(()=> {
+        fetchProtocolStatus();
+      }, 1000)
+
       console.log(`View on explorer: https://solana.fm/tx/${transactionSignature}?cluster=devnet-alpha`);
 
-      fetchProtocolStatus();
 
     } catch(error) {
       console.error("Buy tokens failed:", error);
