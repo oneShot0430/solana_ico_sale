@@ -1,28 +1,172 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as anchor from "@coral-xyz/anchor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TokenSelector } from "@/components/TokenSelector";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Stats } from "@/components/Stats";
-import { Wallet } from "lucide-react";
+import {
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import "@solana/wallet-adapter-react-ui/styles.css";
+import { useConnection, AnchorWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { IDL, BuzeiraSale } from "@/anchor/idl";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { BN } from "@coral-xyz/anchor";
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 
-export default function Index() {
+
+export default function Index() {  
+  const { connection } = useConnection();
+  const walletContext = useWallet();  
+  const {publicKey, sendTransaction} = useWallet();
   const [selectedToken, setSelectedToken] = useState("SOL");
   const [amount, setAmount] = useState("");
   const [isWalletConnected, setIsWalletConnected] = useState(false);
 
+  const tokenPrice =  0.00045;
+  const PROGRAM_ID  = new PublicKey("Fgrg9Ft47mgZ3R7fqo4rdBpaxvCdwrjmgYF8FBapuyfm");
+  const systemProgram = new PublicKey("11111111111111111111111111111111");
+  const tokenProgram = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+  const signer = new PublicKey("E3bsxBhdhQcSKoxiQsGQEuvu59FTtwZWcaqtQjHFjeY");
+
+  const provider = new anchor.AnchorProvider(connection, walletContext as AnchorWallet, {});
+  anchor.setProvider(provider);
+  const program = new anchor.Program(IDL, PROGRAM_ID, provider);
+
+
+  const [protocolStatusPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from("protocol_status")],
+    program.programId
+  );
+
+  const [vaultPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault")],
+    program.programId
+  );
+
+  const [vaultAtaPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault_ata")],
+    program.programId
+  );
+
+  console.log("programs:", protocolStatusPDA.toBase58(), vaultPDA.toBase58(), vaultAtaPDA.toBase58());
   // Placeholder data - would be fetched from blockchain in real implementation
-  const icoData = {
-    totalRaised: 1250000,
-    participants: 3456,
-    tokenPrice: 0.085,
-    currentTokens: 14750000,
-    totalTokens: 20000000,
+  const [icoData, setIcoData] = useState({
+    totalRaised: 0,
+    participants: 0,
+    tokenPrice: tokenPrice,
+    currentTokens: 0,
+    totalTokens: 1000000,
+    tokenAddress: null
+  });
+
+  useEffect(()=> { 
+    fetchProtocolStatus();
+  }, []);
+
+  const fetchProtocolStatus = async () => {
+    try {
+      const protocolStatus = await program.account.protocolStatus.fetch(protocolStatusPDA.toBase58());
+      calIcoData(protocolStatus);
+    } catch(error) {
+      console.error("Error fetching protocol status:", error);
+    }
   };
 
-  const handleBuy = () => {
+  const calIcoData = (protocolStatus) => {
+    const totalParticipants = protocolStatus.totalParticipants.toNumber();
+    const tokenPrice = protocolStatus.tokenPrice.toNumber() / (Math.pow(10, 9));
+    const totalSaleAmount = protocolStatus.totalSaleAmount.toNumber() / protocolStatus.tokenPrice.toNumber();
+    const totalRaised = tokenPrice * totalSaleAmount;
+    const tokenAddress = protocolStatus.tokenMint;
+    const icoData = {
+      totalRaised: totalRaised,
+      participants: totalParticipants,
+      tokenPrice: tokenPrice,
+      currentTokens: totalSaleAmount,
+      totalTokens: 10000000,
+      tokenAddress: tokenAddress,
+    }
+    setIcoData(icoData);
+  }
+
+  const handleBuy = async () => {
     // Implement wallet connection and transaction logic
-    console.log("Buy tokens with", amount, selectedToken);
+    if (Number(amount) <= 0) return;
+    const buyAmount = new BN(Number(amount)  * Math.pow(10, 9)); 
+
+    const [ata] = PublicKey.findProgramAddressSync(
+      [
+        publicKey.toBuffer(),          // Owner's public key buffer
+        TOKEN_PROGRAM_ID.toBuffer(),        // Token Program ID (always the same)
+        icoData.tokenAddress.toBuffer(),             // The mint address of the token (e.g., SOL-wrapped token)
+      ],
+      ASSOCIATED_TOKEN_PROGRAM_ID         // The Associated Token Program ID
+    );
+
+    console.log("buytokens:", ata.toBase58());
+
+    try{
+      const tokenAta = await getAssociatedTokenAddress(
+        new PublicKey(icoData.tokenAddress),
+        publicKey
+      );
+      
+      console.log("ATA Address:", tokenAta.toBase58());
+      
+      // Check if the account exists
+      const accountInfo = await connection.getAccountInfo(tokenAta);
+      const transaction = new Transaction()
+      const buyTransaction = await program.methods
+        .buyToken(buyAmount)
+        .accounts({
+          protocolStatus: protocolStatusPDA,
+          vault: vaultPDA,
+          mint: new PublicKey(icoData.tokenAddress),
+          fromAta: vaultAtaPDA,
+          toAta: ata,
+          signer: publicKey,
+          systemProgram: systemProgram,
+          tokenProgram: tokenProgram,
+        })
+        .instruction();
+
+      console.log("transaction;", buyTransaction);
+
+      if (!accountInfo) {
+        console.log("Creating Associated Token Account...");
+        const createAtaTransaction = createAssociatedTokenAccountInstruction(
+          publicKey,
+          tokenAta,
+          publicKey,
+          new PublicKey(icoData.tokenAddress),
+        );
+        console.log("createAtaTransaction;", createAtaTransaction);
+        transaction.add(
+          createAtaTransaction,
+          buyTransaction
+        );
+      } else {
+        transaction.add(
+          buyTransaction
+        );
+      }
+
+      const transactionSignature = await sendTransaction(
+        transaction,
+        connection
+      );
+
+      console.log(`View on explorer: https://solana.fm/tx/${transactionSignature}?cluster=devnet-alpha`);
+
+      fetchProtocolStatus();
+
+    } catch(error) {
+      console.error("Buy tokens failed:", error);
+    }
   };
 
   return (
@@ -34,10 +178,10 @@ export default function Index() {
             Token ICO Sale
           </h1>
           <p className="text-ico-text text-lg max-w-2xl mx-auto">
-            Join our revolutionary project on Solana. Purchase tokens using SOL, USDT, or USDC.
+            Join our revolutionary project on Solana. Purchase tokens using SOL.
           </p>
+          <WalletMultiButton className="w-full" />
         </div>
-
         {/* Stats */}
         <Stats
           totalRaised={icoData.totalRaised}
@@ -61,7 +205,7 @@ export default function Index() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-ico-text mb-2">
-                Select Payment Token
+                Select Payment Token (Only Working for SOL now)
               </label>
               <TokenSelector selected={selectedToken} onSelect={setSelectedToken} />
             </div>
@@ -83,23 +227,13 @@ export default function Index() {
                 </p>
               )}
             </div>
-
-            {!isWalletConnected ? (
-              <Button
-                onClick={() => setIsWalletConnected(true)}
-                className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
-              >
-                <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
-              </Button>
-            ) : (
-              <Button
-                onClick={handleBuy}
-                className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
-                disabled={!amount || Number(amount) <= 0}
-              >
-                Buy Tokens
-              </Button>
-            )}
+            <Button
+              onClick={handleBuy}
+              className="w-full bg-gradient-to-r from-ico-primary to-ico-secondary hover:opacity-90 transition-opacity"
+              disabled={!amount || Number(amount) <= 0}
+            >
+              Buy Tokens
+            </Button>
           </div>
         </div>
       </div>

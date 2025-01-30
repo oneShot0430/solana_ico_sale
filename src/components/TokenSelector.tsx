@@ -8,8 +8,8 @@ interface Token {
 
 const tokens: Token[] = [
   { symbol: "SOL", name: "Solana", icon: "☀️" },
-  { symbol: "USDC", name: "USD Coin", icon: "💵" },
-  { symbol: "USDT", name: "Tether", icon: "💰" },
+  // { symbol: "USDC", name: "USD Coin", icon: "💵" },
+  // { symbol: "USDT", name: "Tether", icon: "💰" },
 ];
 
 interface TokenSelectorProps {
