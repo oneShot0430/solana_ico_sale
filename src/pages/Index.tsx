@@ -18,13 +18,13 @@ import { BN } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 
 
+
 export default function Index() {  
   const { connection } = useConnection();
   const walletContext = useWallet();  
   const {publicKey, sendTransaction} = useWallet();
   const [selectedToken, setSelectedToken] = useState("SOL");
   const [amount, setAmount] = useState("");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
 
   const tokenPrice =  0.00045;
   const PROGRAM_ID  = new PublicKey("Fgrg9Ft47mgZ3R7fqo4rdBpaxvCdwrjmgYF8FBapuyfm");

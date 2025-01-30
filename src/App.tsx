@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useMemo } from "react";
 import { clusterApiUrl } from "@solana/web3.js";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
+
 import Index from "./pages/Index";
 import {
   WalletProvider,
@@ -40,6 +41,5 @@ const App = () => {
     </QueryClientProvider>
   );
 };
-
 
 export default App;
