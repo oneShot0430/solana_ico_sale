@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import * as anchor from "@coral-xyz/anchor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TokenSelector } from "@/components/TokenSelector";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Stats } from "@/components/Stats";
 import { Buffer } from "buffer";
@@ -208,13 +207,6 @@ export default function Index() {
           <h2 className="text-xl font-bold mb-4 text-ico-text">Purchase Tokens</h2>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-ico-text mb-2">
-                Select Payment Token (Only Working for SOL now)
-              </label>
-              <TokenSelector selected={selectedToken} onSelect={setSelectedToken} />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-ico-text mb-2">
                 Amount
