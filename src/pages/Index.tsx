@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { TokenSelector } from "@/components/TokenSelector";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Stats } from "@/components/Stats";
+import { Buffer } from "buffer";
 import {
   useWallet,
 } from "@solana/wallet-adapter-react";
@@ -19,15 +20,15 @@ import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } fr
 
 
 
-export default function Index() {  
+export default function Index() {
   const { connection } = useConnection();
-  const walletContext = useWallet();  
-  const {publicKey, sendTransaction} = useWallet();
+  const walletContext = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const [selectedToken, setSelectedToken] = useState("SOL");
   const [amount, setAmount] = useState("");
 
-  const tokenPrice =  0.00045;
-  const PROGRAM_ID  = new PublicKey("Fgrg9Ft47mgZ3R7fqo4rdBpaxvCdwrjmgYF8FBapuyfm");
+  const tokenPrice = 0.00045;
+  const PROGRAM_ID = new PublicKey("Fgrg9Ft47mgZ3R7fqo4rdBpaxvCdwrjmgYF8FBapuyfm");
   const systemProgram = new PublicKey("11111111111111111111111111111111");
   const tokenProgram = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
   const signer = new PublicKey("E3bsxBhdhQcSKoxiQsGQEuvu59FTtwZWcaqtQjHFjeY");
@@ -63,7 +64,7 @@ export default function Index() {
     tokenAddress: null
   });
 
-  useEffect(()=> { 
+  useEffect(() => {
     fetchProtocolStatus();
   }, []);
 
@@ -72,7 +73,7 @@ export default function Index() {
       const protocolStatus = await program.account.protocolStatus.fetch(protocolStatusPDA.toBase58());
       console.log("protocolStatus", protocolStatus);
       calIcoData(protocolStatus);
-    } catch(error) {
+    } catch (error) {
       console.error("Error fetching protocol status:", error);
     }
   };
@@ -97,7 +98,7 @@ export default function Index() {
   const handleBuy = async () => {
     // Implement wallet connection and transaction logic
     if (Number(amount) <= 0) return;
-    const buyAmount = new BN(Number(amount)  * Math.pow(10, 9)); 
+    const buyAmount = new BN(Number(amount) * Math.pow(10, 9));
 
     const [ata] = PublicKey.findProgramAddressSync(
       [
@@ -110,14 +111,14 @@ export default function Index() {
 
     console.log("buytokens:", ata.toBase58());
 
-    try{
+    try {
       const tokenAta = await getAssociatedTokenAddress(
         new PublicKey(icoData.tokenAddress),
         publicKey
       );
-      
+
       console.log("ATA Address:", tokenAta.toBase58());
-      
+
       // Check if the account exists
       const accountInfo = await connection.getAccountInfo(tokenAta);
       const transaction = new Transaction()
@@ -161,14 +162,14 @@ export default function Index() {
         connection
       );
 
-      setTimeout(()=> {
+      setTimeout(() => {
         fetchProtocolStatus();
       }, 1000)
 
       console.log(`View on explorer: https://solana.fm/tx/${transactionSignature}?cluster=devnet-alpha`);
 
 
-    } catch(error) {
+    } catch (error) {
       console.error("Buy tokens failed:", error);
     }
   };
@@ -205,7 +206,7 @@ export default function Index() {
         {/* Purchase Form */}
         <div className="bg-ico-card p-6 rounded-lg border border-ico-primary/20 space-y-4">
           <h2 className="text-xl font-bold mb-4 text-ico-text">Purchase Tokens</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-ico-text mb-2">
